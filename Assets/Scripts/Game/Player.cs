@@ -3,15 +3,24 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
 
 public class Player : MonoBehaviour
 {
     public static event System.Action OnPlayerEnterGoal;
+    //public static event System.Action OnInteractionRange;
     
     private PlayerInputActions playerInputActions;
     [SerializeField] private float movementSpeed = 7;
     [SerializeField] private float turningSpeed;
     [SerializeField] private float smoothMoveTime = .1f;
+    
+    [SerializeField] private LayerMask interactableLayer;
+    [SerializeField] private Transform interactionLocation;
+    [SerializeField] private float interactionRadius;
+    [SerializeField] private TMPro.TextMeshProUGUI interactionText;
+    private Quaternion textInitRotation;
 
     private float angle;
     private float smoothInputMagnitude;
@@ -29,11 +38,32 @@ public class Player : MonoBehaviour
         _rigidbody = GetComponent<Rigidbody>();
         gameManager = FindObjectOfType<GameManager>();
         playerInputActions = gameManager.playerInputActions;
+
+        playerInputActions.Player.Interact.performed += HandleInteract;
+        
+        textInitRotation = interactionText.transform.rotation;
+    }
+
+    void LateUpdate()
+    {
+        interactionText.transform.rotation = textInitRotation;
+    }
+
+    private void HandleInteract(InputAction.CallbackContext context)
+    {
+        Collider[] colliders =  Physics.OverlapSphere(transform.position, 5f, interactableLayer);
+        if (colliders.Length != 0) {
+            Interactable interactable = colliders[0].GetComponent<Interactable>();
+            if (interactable != null) {
+                //interactable.Interact();
+            }
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
+        //Movement Stuff
         inputVector = playerInputActions.Player.Movement.ReadValue<Vector2>();
         Vector3 inputDirection = new Vector3(inputVector.x, 0, inputVector.y);
         smoothInputMagnitude = Mathf.SmoothDamp(smoothInputMagnitude, inputDirection.magnitude, ref smoothMoveVelocity, smoothMoveTime);
@@ -44,6 +74,24 @@ public class Player : MonoBehaviour
         
         velocity = inputDirection * (movementSpeed * smoothInputMagnitude);
         //transform.Translate(velocity * Time.deltaTime, Space.World); // Change by move amount 
+        
+        //Interaction stuff
+        bool isNearInteraction = false;
+        Collider[] colliders =  Physics.OverlapSphere(interactionLocation.position, interactionRadius, interactableLayer);
+        if (colliders.Length != 0) {
+            Interactable interactable = colliders[0].GetComponent<Interactable>();
+            if (interactable != null) {
+                isNearInteraction = true;
+                interactionText.text = interactable.GetDescription();
+                if (playerInputActions.Player.Interact.WasPerformedThisFrame()) {
+                    interactable.Interact();
+                }
+            }
+            
+        }
+
+        if (!isNearInteraction) interactionText.text = "";
+
 
     }
 
@@ -55,6 +103,8 @@ public class Player : MonoBehaviour
             }
         }
     }
+
+
 
     private void FixedUpdate()
     {
