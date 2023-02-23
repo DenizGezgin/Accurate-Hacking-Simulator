@@ -44,6 +44,11 @@ public class Player : MonoBehaviour
         textInitRotation = interactionText.transform.rotation;
     }
 
+    private void OnDestroy() {
+        playerInputActions.Player.Interact.performed -= HandleInteract;
+
+    }
+
     void LateUpdate()
     {
         interactionText.transform.rotation = textInitRotation;

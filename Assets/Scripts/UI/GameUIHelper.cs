@@ -37,17 +37,14 @@ public class GameUIHelper : MonoBehaviour
 
     public void ShowGameLoseUI() {
         gameWinUI.SetActive(false);
+        _hackingUI.SetActive(false);
         gameLoseUI.SetActive(true);
     }
     public void ShowGameWinUI() {
         gameWinUI.SetActive(true);
         gameLoseUI.SetActive(false);
     }
-    public void ClearUI() {
-        gameWinUI.SetActive(false);
-        gameLoseUI.SetActive(false);
-    }
-    
+
     public void SetEscapeTimerUI(float time)
     {
         escapeTimerUI.text = time.ToString("F2");

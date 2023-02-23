@@ -28,7 +28,7 @@ public class GuardBase : MonoBehaviour
 
     private Transform player;
 
-    private void OnDrawGizmosSelected()
+    private void OnDrawGizmos()
     {
         Vector3 startPosition = pathHolder.transform.position;
         Vector3 previousPosition = startPosition;
@@ -41,7 +41,7 @@ public class GuardBase : MonoBehaviour
 
         Gizmos.color = Color.red;
         Gizmos.DrawRay(transform.position, transform.forward*viewDistance);
-        Gizmos.DrawWireSphere(transform.position, viewRadius);
+        //Gizmos.DrawWireSphere(transform.position, viewRadius);
     }
 
 

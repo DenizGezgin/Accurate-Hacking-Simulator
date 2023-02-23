@@ -15,7 +15,8 @@ public class GameManager : MonoBehaviour
         Walking,
         Hacking,
         WinLevel,
-        LoseLevel
+        LoseLevel,
+        Dialog,
     }
 
     public GameState state;
@@ -30,7 +31,10 @@ public class GameManager : MonoBehaviour
     [SerializeField] private GameUIHelper _ui;
     private bool isGameOver = false;
     private bool isAlarmOn = false;
-    
+    public GameObject _goalObject;
+    public GameObject _dialogBox;
+    //private Renderer _goalRenderer;
+
     void Awake()
     {
         playerInputActions = new PlayerInputActions();
@@ -39,18 +43,30 @@ public class GameManager : MonoBehaviour
 
         remaningEscapeTime = escapeTime;
 
-        playerInputActions.Player.Enable();
-        playerInputActions.Menu.Disable();
-        
         GuardBase.OnGuardHasSpottedPlayer += SetGameOver;
         playerInputActions.Menu.ResetScene.performed += ResetGame;
         Player.OnPlayerEnterGoal += CheckGameWon;
         Computer.OnComputerHacked += StartAlarm;
+        
+        playerInputActions.Menu.Disable();
+
+
+        Debug.Log("Awake");
     }
 
     private void Start()
     {
-        UpdateGameState(GameState.Walking);
+        Renderer _goalRenderer = _goalObject.GetComponent<Renderer>();
+        _goalRenderer.material.SetColor("_Color", Color.red);
+        Debug.Log("Start");
+        if (!SoundManager.Instance.GetCursedBoolAtIndex(SceneManager.GetActiveScene().buildIndex)) {
+            _dialogBox.SetActive(true);
+            SoundManager.Instance.SetCursedBoolToTrue(SceneManager.GetActiveScene().buildIndex);
+            UpdateGameState(GameState.Dialog);
+        }
+        else {
+            UpdateGameState(GameState.Walking);
+        }
     }
 
     public void UpdateGameState(GameState newState)
@@ -67,8 +83,12 @@ public class GameManager : MonoBehaviour
                 HandleHacking();
                 break;
             case GameState.WinLevel:
+                //HandleWin();
                 break;
             case GameState.LoseLevel:
+                //HandleLose();
+                break;
+            case GameState.Dialog:
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(newState), newState, null);
@@ -85,13 +105,17 @@ public class GameManager : MonoBehaviour
     private void HandleWalking()
     {
         playerInputActions.Player.Enable();
+        playerInputActions.Menu.Disable();
     }
 
     void OnDestroy() {
         // Unsubscribe to the event
         GuardBase.OnGuardHasSpottedPlayer -= SetGameOver;
         Player.OnPlayerEnterGoal -= SetGameWon;
+        Player.OnPlayerEnterGoal -= CheckGameWon;
         playerInputActions.Menu.ResetScene.performed -= ResetGame;
+        Computer.OnComputerHacked -= StartAlarm;
+
     }
     
     // Update is called once per frame
@@ -107,6 +131,8 @@ public class GameManager : MonoBehaviour
         {
             SetGameOver();
         }
+        
+        
     }
     
     
@@ -117,6 +143,7 @@ public class GameManager : MonoBehaviour
     
     void SetGameWon()
     {
+        UpdateGameState(GameState.WinLevel);
         isGameOver = true;
         isAlarmOn = false;
         playerInputActions.Player.Disable();
@@ -126,24 +153,51 @@ public class GameManager : MonoBehaviour
 
     void SetGameOver()
     {
-        isGameOver = true;
-        isAlarmOn = false;
-        playerInputActions.Player.Disable();
-        playerInputActions.Menu.Enable();
-        _ui.ShowGameLoseUI();
+        if (state != GameState.WinLevel)
+        {
+            isGameOver = true;
+            isAlarmOn = false;
+            playerInputActions.Player.Disable();
+            playerInputActions.Menu.Enable();
+            _ui.ShowGameLoseUI();
+            UpdateGameState(GameState.LoseLevel);
+        }
+        
     }
     
     private void ResetGame(InputAction.CallbackContext context)
     {
         if (context.performed)
         {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            SoundManager.Instance.ChangeMusicToWalking();
+            if (state == GameState.LoseLevel)
+            {
+                SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+            }
+            else if (state == GameState.WinLevel)
+            {
+                NextScene();
+            }
         }
     }
 
     private void StartAlarm()
     {
         computersToHack--;
-        isAlarmOn = true;
+        if (computersToHack == 0)
+        {
+            _goalObject = GameObject.Find("Goal");
+            Renderer _goalRenderer = _goalObject.GetComponent<Renderer>();
+            _goalRenderer.material.SetColor("_Color", Color.green);
+        }
+
+        if (!isAlarmOn) {
+            isAlarmOn = true;
+            SoundManager.Instance.ChangeMusicToAlert();
+        }
+    }
+    
+    public void NextScene() {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex + 1);
     }
 }
